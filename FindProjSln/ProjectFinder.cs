@@ -7,12 +7,35 @@ namespace FindProjSln
     internal class ProjectFinder
     {
 
-        public ProjectFinder(AppConfig config)
+        public ProjectFinder(
+            AppConfig config,
+            SolutionFinder solutionFinder)
         {
             _config = config;
+            _solutionFinder = solutionFinder;
         }
 
         public void Start()
+        {
+            if(string.IsNullOrEmpty(_config.ProjectFilePath))
+            {
+                FindProjectsAndSolutions();
+            }
+            else
+            {
+                FindSolutionForProjectFile(_config.ProjectFilePath);
+            }
+        }
+
+
+        private const string CSPROJ_FILE_EXTENSION = ".csproj";
+        private const string VCXPROJ_FILE_EXTENSION = ".vcxproj";
+        private static readonly string[] ProjectFileExtensions = [CSPROJ_FILE_EXTENSION, VCXPROJ_FILE_EXTENSION];
+        private readonly AppConfig _config;
+        private readonly SolutionFinder _solutionFinder;
+
+
+        private void FindProjectsAndSolutions()
         {
             var owningProjects = FindOwningProjects(
                 _config.FileNames.First(),
@@ -22,15 +45,23 @@ namespace FindProjSln
             foreach (var project in owningProjects)
             {
                 Console.WriteLine(project);
+                if (_config.FindSolutions)
+                {
+                    foreach (var sln in _solutionFinder.FindSolutions(project))
+                    {
+                        Console.WriteLine($" --IN--> {sln}");
+                    }
+                }
             }
         }
 
-
-        private const string CSPROJ_FILE_EXTENSION = ".csproj";
-        private const string VCXPROJ_FILE_EXTENSION = ".vcxproj";
-        private static readonly string[] ProjectFileExtensions = [CSPROJ_FILE_EXTENSION, VCXPROJ_FILE_EXTENSION];
-        private readonly AppConfig _config;
-
+        private void FindSolutionForProjectFile(string projectFilePath)
+        {
+            foreach (var sln in _solutionFinder.FindSolutions(projectFilePath))
+            {
+                Console.WriteLine($" --IN--> {sln}");
+            }
+        }
 
 
         /// <summary>
@@ -54,58 +85,34 @@ namespace FindProjSln
         /// Lists all project files that are placed along the path.
         /// </summary>
         /// <param name="path"></param>
-        /// <param name="rootDirectory">The root directory, which represents the boundaries for the traversal.</param>
+        /// <param name="rootPath">The root directory, which represents the boundaries for the traversal.</param>
         /// <param name="traverseWholeTree">If true, the algorithm traverses all subfolder of the root directory.</param>
         /// <returns></returns>
-        private IEnumerable<string> ProjectFilesAlongPath(string path, string? rootDirectory = null, bool traverseWholeTree = false)
+        private IEnumerable<string> ProjectFilesAlongPath(string path, string? rootPath = null, bool traverseWholeTree = false)
         {
             var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            var directoriesToTraverse = EnumerateDirectoriesAlongPath(path);
+            var directoriesToTraverse = path.EnumerateDirectoriesAlongPath();
             if (traverseWholeTree)
             {
-                if (string.IsNullOrEmpty(rootDirectory))
+                if (string.IsNullOrEmpty(rootPath))
                 {
-                    throw new ArgumentException($"The parameter {nameof(rootDirectory)} must not be null or empty if {nameof(traverseWholeTree)} is set true.");
+                    throw new ArgumentException($"The parameter {nameof(rootPath)} must not be null or empty if {nameof(traverseWholeTree)} is set true.");
                 }
-                directoriesToTraverse = EnumerateSubDirectories(rootDirectory);
+                directoriesToTraverse = rootPath.EnumerateAllSubDirectories();
             }
 
             return directoriesToTraverse
                 .SelectMany(dir => ProjectFileExtensions
                     .Select(fileExtension => $"*{fileExtension}")
                     .SelectMany(fileExtension => Directory.EnumerateFiles(dir, fileExtension))
+                    .Select(p => p.NormalizeSeparatorChars())
                     .Where(projFile => visited.Add(projFile)));
         }
 
-        private IEnumerable<string> EnumerateSubDirectories(string path)
-        {
-            var options = new EnumerationOptions
-            {
-                RecurseSubdirectories = true,
-                IgnoreInaccessible = true
-            };
+        #region Project-Membership Checks
 
-            return Directory.EnumerateDirectories(path, "*", options);
-        }
-
-        private IEnumerable<string> EnumerateDirectoriesAlongPath(string path)
-        {
-            var currentDirectory = path;
-            while (currentDirectory is not null)
-            {
-                yield return currentDirectory;
-
-                var parent = Path.GetDirectoryName(currentDirectory)!;
-                currentDirectory = parent == currentDirectory ? null : parent;
-            }
-        }
-
-        /// <summary>
-        /// Determines whether a project file owns the given source file.
-        /// Handles both SDK-style (implicit glob includes) and legacy (explicit XML items).
-        /// </summary>
-        static bool ProjectOwnsFile(string projectPath, string sourcePath)
+        private static bool ProjectOwnsFile(string projectPath, string sourcePath)
         {
             try
             {
@@ -134,9 +141,7 @@ namespace FindProjSln
             }
         }
 
-        #region Project-Membership Checks
-
-        static bool CsprojOwnsFile(XDocument doc, string projectDir, string sourcePath)
+        private static bool CsprojOwnsFile(XDocument doc, string projectDir, string sourcePath)
         {
             // Detect SDK-style project: has a Sdk attribute/element or no <ItemGroup> with explicit Compile items.
             bool isSdkStyle = IsSdkStyleProject(doc);
@@ -155,7 +160,7 @@ namespace FindProjSln
         /// SDK-style projects include all files under the project directory by default
         /// unless explicitly excluded. We mirror that logic here.
         /// </summary>
-        static bool SdkStyleCsprojOwnsFile(XDocument doc, string projectDir, string sourcePath)
+        private static bool SdkStyleCsprojOwnsFile(XDocument doc, string projectDir, string sourcePath)
         {
             // Default included extensions for C# SDK projects
             string[] defaultIncludes = ["*.cs"];
@@ -175,12 +180,12 @@ namespace FindProjSln
             return isExplicitlyIncluded || !isExplicitlyExcluded && sourcePath.IsUnderDirectory(projectDir);
         }
 
-        static bool LegacyCsprojOwnsFile(XDocument doc, string projectDir, string sourcePath)
+        private static bool LegacyCsprojOwnsFile(XDocument doc, string projectDir, string sourcePath)
         {
             return HasExplicitInclude(doc, projectDir, sourcePath, "Compile", "Content", "None", "EmbeddedResource", "ClCompile", "ClInclude");
         }
 
-        static bool VcxprojOwnsFile(XDocument doc, string projectDir, string sourcePath)
+        private static bool VcxprojOwnsFile(XDocument doc, string projectDir, string sourcePath)
         {
             return HasExplicitInclude(doc, projectDir, sourcePath, "ClCompile", "ClInclude", "None", "ResourceCompile", "CustomBuild");
         }

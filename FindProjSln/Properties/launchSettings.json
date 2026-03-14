@@ -2,11 +2,15 @@
   "profiles": {
     "FindProjSln Upstream": {
       "commandName": "Project",
-      "commandLineArgs": "-p P:/projects/cs/CsLanguageFeatures P:/projects/cs/CsLanguageFeatures/CsLanguageFeatures/Version10/GlobalUsingDefinition.cs"
+      "commandLineArgs": "-p P:/projects/cs/CsLanguageFeatures --sln P:/projects/cs/CsLanguageFeatures/CsLanguageFeatures/Version10/GlobalUsingDefinition.cs"
     },
     "FindProjSln Traverse Root": {
       "commandName": "Project",
-      "commandLineArgs": "-p P:/projects/cs/CsLanguageFeatures --traverse P:/projects/cs/CsLanguageFeatures/CsLanguageFeatures/Version10/GlobalUsingDefinition.cs"
+      "commandLineArgs": "-p P:/projects/cs/CsLanguageFeatures --traverse --sln P:/projects/cs/CsLanguageFeatures/CsLanguageFeatures/Version10/GlobalUsingDefinition.cs"
+    },
+    "FindProjSln Find SLN": {
+      "commandName": "Project",
+      "commandLineArgs": "--find-sln P:/projects/cs/CsLanguageFeatures/CsLanguageFeatures/CsLanguageFeatures.csproj"
     }
   }
 }

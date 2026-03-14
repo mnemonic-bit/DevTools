@@ -1,5 +1,6 @@
 ﻿using CommandLine;
 using FindProjSln.Configuration;
+using FindProjSln.FileSystem;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FindProjSln
@@ -27,7 +28,8 @@ namespace FindProjSln
             var services = new ServiceCollection()
                 .AddSingleton(LoadConfiguration(appConfig))
                 .AddSingleton(new CancellationTokenSource())
-                .AddScoped<ProjectFinder>();
+                .AddScoped<ProjectFinder>()
+                .AddScoped<SolutionFinder>();
 
             _serviceProvider = services.BuildServiceProvider();
         }
@@ -64,8 +66,12 @@ namespace FindProjSln
 
         private AppConfig LoadConfiguration(AppConfig appConfig)
         {
-            // We can load additional configuration values for this app
-            // at this point and inject them into the AppConfig instance.
+            // We normalize our file names here for once, to make comparisons
+            // at later stages uniform.
+            appConfig.FileNames = appConfig.FileNames
+                .Select(f => f.NormalizeSeparatorChars());
+            appConfig.Path = appConfig.Path.NormalizeSeparatorChars();
+            appConfig.ProjectFilePath = appConfig.ProjectFilePath?.NormalizeSeparatorChars();
 
             return appConfig;
         }

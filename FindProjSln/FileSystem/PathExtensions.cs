@@ -3,6 +3,30 @@
     public static class PathExtensions
     {
 
+        public static IEnumerable<string> EnumerateAllSubDirectories(this string path)
+        {
+            var options = new EnumerationOptions
+            {
+                RecurseSubdirectories = true,
+                IgnoreInaccessible = true
+            };
+
+            return Directory.EnumerateDirectories(path, "*", options)
+                .Prepend(path);
+        }
+
+        public static IEnumerable<string> EnumerateDirectoriesAlongPath(this string path)
+        {
+            var currentDirectory = path;
+            while (currentDirectory is not null)
+            {
+                yield return currentDirectory;
+
+                var parent = Path.GetDirectoryName(currentDirectory)!;
+                currentDirectory = parent == currentDirectory ? null : parent;
+            }
+        }
+
         public static bool IsSeparatorChar(this char ch)
         {
             return ch == Path.DirectorySeparatorChar || ch == Path.AltDirectorySeparatorChar;
@@ -21,8 +45,7 @@
         public static string NormalizeSeparatorChars(this string path)
         {
             return path
-                .Replace('/', Path.DirectorySeparatorChar)
-                .Replace('\\', Path.DirectorySeparatorChar);
+                .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
         }
 
     }

@@ -14,5 +14,11 @@ namespace FindProjSln.Configuration
         [Option('t', "traverse", Default = false, HelpText = "If true, traverses all sub-directories from the given root path. Note that with this parameter set, the path-parameter must also be set.")]
         public bool TraverseRoot { get; set; }
 
+        [Option("sln", Default = false, HelpText = "Also finds solution files in which the project files are referenced.")]
+        public bool FindSolutions { get; set; }
+
+        [Option("find-sln", Default = null, HelpText = "Also finds solution files in which the project files are referenced.")]
+        public string? ProjectFilePath { get; set; }
+
     }
 }
