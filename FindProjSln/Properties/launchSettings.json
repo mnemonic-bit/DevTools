@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "FindProjSln Upstream": {
+      "commandName": "Project",
+      "commandLineArgs": "-p P:/projects/cs/CsLanguageFeatures P:/projects/cs/CsLanguageFeatures/CsLanguageFeatures/Version10/GlobalUsingDefinition.cs"
+    },
+    "FindProjSln Traverse Root": {
+      "commandName": "Project",
+      "commandLineArgs": "-p P:/projects/cs/CsLanguageFeatures --traverse P:/projects/cs/CsLanguageFeatures/CsLanguageFeatures/Version10/GlobalUsingDefinition.cs"
+    }
+  }
+}
