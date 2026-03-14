@@ -1,0 +1,16 @@
+{
+  "profiles": {
+    "NumberOfDaysSince 1.1.1900": {
+      "commandName": "Project",
+      "commandLineArgs": "\"21.1.2025\" --reference-date \"1.1.1900\""
+    },
+    "NumberOfDaysSince no ref": {
+      "commandName": "Project",
+      "commandLineArgs": "\"21.1.2025\""
+    },
+    "NumberOfDaysSince NOTS": {
+      "commandName": "Project",
+      "commandLineArgs": "--number-of-days 40 --reference-date \"1.1.1900\""
+    }
+  }
+}
